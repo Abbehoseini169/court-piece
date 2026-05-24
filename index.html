@@ -311,6 +311,31 @@
     #start-btn:hover { transform: translateY(-1px); }
     #countdown { font-size: 0.82rem; color: #aaa; }
 
+    /* dela-panel i overlay */
+    #share-panel { margin: 0.6rem 0 0.8rem; }
+    #big-code {
+      font-size: 2.8rem;
+      font-weight: bold;
+      letter-spacing: 10px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 14px;
+      padding: 0.5rem 1.6rem;
+      margin-bottom: 0.8rem;
+      display: inline-block;
+    }
+    .share-btns { display: flex; gap: 0.5rem; justify-content: center; }
+    .share-btn {
+      padding: 0.5rem 1.1rem;
+      border: none; border-radius: 8px;
+      font-size: 0.85rem; font-weight: bold;
+      cursor: pointer;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .share-btn:hover  { background: rgba(255,255,255,0.25); transform: translateY(-1px); }
+    .share-btn.copied { background: #4caf50; }
+
     /* mobilanpassning */
     @media (max-width: 600px) {
       #seats { grid-template-columns: repeat(2, 1fr); }
@@ -383,6 +408,13 @@
 <div id="overlay">
   <div id="overlay-box">
     <h2 id="overlay-title">Väntar...</h2>
+    <div id="share-panel" style="display:none">
+      <div id="big-code">—</div>
+      <div class="share-btns">
+        <button class="share-btn" data-label="📋 Kopiera kod" onclick="copyCode(this)">📋 Kopiera kod</button>
+        <button class="share-btn" data-label="🔗 Kopiera länk" onclick="copyLink(this)">🔗 Kopiera länk</button>
+      </div>
+    </div>
     <p id="overlay-msg"></p>
     <div id="tricks-display"></div>
     <button id="overlay-btn" style="display:none" onclick="overlayAction()">Nästa hand</button>
@@ -574,13 +606,16 @@ function updateOverlay(st) {
 
   if (!st.started) {
     overlayMode = 'waiting';
-    title.textContent = `Rum: ${myCode}`;
-    msg.textContent   = 'Dela koden med dina vänner. Spelet startar automatiskt när alla är med.';
+    title.textContent = 'Dela med vänner';
+    document.getElementById('big-code').textContent = myCode;
+    document.getElementById('share-panel').style.display = 'block';
+    msg.textContent   = 'Spelet startar automatiskt när alla 4 är med.';
     td.textContent    = '';
     btn.style.display = 'none';
     ov.classList.add('show');
     return;
   }
+  document.getElementById('share-panel').style.display = 'none';
   if (st.phase === 'handover') {
     overlayMode = 'handover';
     const r        = st.lastResult;
@@ -642,8 +677,31 @@ function cardId(c) { return `${c.r}${c.s}`; }
 const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 function rankValue(r) { return RANK_ORDER.indexOf(r); }
 
+// ---- Dela rumkod ----
+function copyCode(btn) {
+  navigator.clipboard.writeText(myCode).then(() => flashBtn(btn, '✓ Kopierat!'));
+}
+function copyLink(btn) {
+  const url = `${location.origin}/?join=${myCode}`;
+  navigator.clipboard.writeText(url).then(() => flashBtn(btn, '✓ Kopierat!'));
+}
+function flashBtn(btn, doneText) {
+  btn.textContent = doneText;
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = btn.dataset.label;
+    btn.classList.remove('copied');
+  }, 2000);
+}
+
 // ---- Auto-återanslutning ----
 window.addEventListener('load', () => {
+  const joinParam = new URLSearchParams(location.search).get('join');
+  if (joinParam) {
+    document.getElementById('code-input').value = joinParam.toUpperCase();
+    document.getElementById('code-input').focus();
+  }
+
   const pid  = localStorage.getItem('cp_pid');
   const code = localStorage.getItem('cp_code');
   if (!pid || !code) return;
