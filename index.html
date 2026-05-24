@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Court Piece</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a5c2a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ---- LOBBY ---- */
+    #lobby {
+      background: rgba(0,0,0,0.5);
+      padding: 2rem 3rem;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 320px;
+      text-align: center;
+    }
+    #lobby h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    #lobby input {
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      text-align: center;
+    }
+    #lobby button {
+      padding: 0.7rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #btn-create { background: #f0c040; color: #333; }
+    #btn-join   { background: #4caf50; color: #fff; }
+    .sep { color: #aaa; font-size: 0.85rem; }
+
+    /* ---- GAME ---- */
+    #game { display: none; width: 100%; max-width: 900px; padding: 1rem; }
+
+    /* top bar */
+    #topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.4);
+      border-radius: 10px;
+      padding: 0.5rem 1rem;
+      margin-bottom: 0.8rem;
+      font-size: 0.9rem;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    #room-code { font-size: 1.4rem; font-weight: bold; letter-spacing: 4px; }
+    .score-box { background: rgba(255,255,255,0.15); border-radius: 8px; padding: 0.3rem 0.8rem; }
+
+    /* seats */
+    #seats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+    }
+    .seat {
+      background: rgba(0,0,0,0.35);
+      border-radius: 10px;
+      padding: 0.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .seat.active-turn { border-color: #f0c040; }
+    .seat.you { border-color: #4caf50; }
+    .seat.disconnected { opacity: 0.4; }
+    .seat-name { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seat-cards { font-size: 0.75rem; color: #ccc; }
+    .seat-team { font-size: 0.7rem; color: #aaa; }
+
+    /* table */
+    #table-area {
+      background: rgba(0,0,0,0.25);
+      border-radius: 14px;
+      min-height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.8rem;
+      flex-wrap: wrap;
+      padding: 1rem;
+      position: relative;
+    }
+    #table-label {
+      position: absolute;
+      top: 8px; left: 14px;
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+    #trump-badge {
+      position: absolute;
+      top: 8px; right: 14px;
+      font-size: 1.2rem;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      padding: 2px 10px;
+    }
+
+    /* cards */
+    .card {
+      width: 64px;
+      height: 96px;
+      border-radius: 8px;
+      background: #fff;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: bold;
+      box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
+      cursor: default;
+      user-select: none;
+      position: relative;
+      transition: transform 0.15s;
+    }
+    .card.red { color: #c0392b; }
+    .card.legal {
+      cursor: pointer;
+      outline: 3px solid #f0c040;
+    }
+    .card.legal:hover { transform: translateY(-10px); }
+    .card-rank { font-size: 1.2rem; }
+    .card-suit { font-size: 1.4rem; line-height: 1; }
+    .card-player { font-size: 0.6rem; color: #666; margin-top: 4px; }
+
+    /* hand */
+    #hand-area {
+      background: rgba(0,0,0,0.25);
+      border-radius: 14px;
+      padding: 1rem;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    #hand-label { color: #aaa; font-size: 0.75rem; margin-bottom: 0.4rem; }
+
+    /* status / info */
+    #status-bar {
+      text-align: center;
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+      min-height: 1.4rem;
+      color: #f0c040;
+      font-weight: bold;
+    }
+
+    /* trump selector */
+    #trump-selector {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(0,0,0,0.5);
+      border-radius: 14px;
+      padding: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+    #trump-selector h3 { margin-bottom: 0.2rem; }
+    #trump-buttons { display: flex; gap: 0.5rem; }
+    #trump-buttons button {
+      width: 56px; height: 56px;
+      border: none; border-radius: 10px;
+      font-size: 1.8rem; cursor: pointer;
+      background: #fff;
+      box-shadow: 2px 4px 8px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+    #trump-buttons button:hover { transform: scale(1.1); }
+
+    /* overlay (lobby waiting / hand over / game over) */
+    #overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    #overlay.show { display: flex; }
+    #overlay-box {
+      background: #1a5c2a;
+      border-radius: 16px;
+      padding: 2rem 3rem;
+      text-align: center;
+      min-width: 280px;
+    }
+    #overlay-box h2 { font-size: 1.6rem; margin-bottom: 0.6rem; }
+    #overlay-box p  { color: #ccc; margin-bottom: 1rem; }
+    #overlay-box button {
+      padding: 0.7rem 2rem;
+      border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: bold;
+      cursor: pointer;
+      background: #f0c040; color: #333;
+    }
+    #tricks-display { font-size: 1.1rem; margin-bottom: 0.6rem; }
+
+    #start-btn {
+      display: none;
+      padding: 0.6rem 1.6rem;
+      border: none; border-radius: 8px;
+      font-size: 0.95rem; font-weight: bold;
+      cursor: pointer;
+      background: #f0c040; color: #333;
+    }
+
+    /* countdown */
+    #countdown { font-size: 0.85rem; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <h1>♠ Court Piece</h1>
+  <input id="name-input" type="text" placeholder="Ditt namn" maxlength="16" />
+  <button id="btn-create">Skapa rum</button>
+  <div class="sep">— eller —</div>
+  <input id="code-input" type="text" placeholder="Rumkod (t.ex. AB3K)" maxlength="4" style="text-transform:uppercase" />
+  <button id="btn-join">Gå med</button>
+  <div id="lobby-error" style="color:#f88;font-size:0.85rem;min-height:1rem"></div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div id="topbar">
+    <div>Rum: <span id="room-code">—</span></div>
+    <div id="countdown"></div>
+    <div class="score-box">Lag A (0&2): <span id="score-a">0</span></div>
+    <div class="score-box">Lag B (1&3): <span id="score-b">0</span></div>
+    <button id="start-btn" onclick="startGame()">Starta nu</button>
+  </div>
+
+  <div id="seats">
+    <div class="seat" id="seat-0"><div class="seat-name">—</div><div class="seat-cards"></div><div class="seat-team">Lag A</div></div>
+    <div class="seat" id="seat-1"><div class="seat-name">—</div><div class="seat-cards"></div><div class="seat-team">Lag B</div></div>
+    <div class="seat" id="seat-2"><div class="seat-name">—</div><div class="seat-cards"></div><div class="seat-team">Lag A</div></div>
+    <div class="seat" id="seat-3"><div class="seat-name">—</div><div class="seat-cards"></div><div class="seat-team">Lag B</div></div>
+  </div>
+
+  <div id="status-bar"></div>
+
+  <div id="trump-selector">
+    <h3>Välj trumffärg</h3>
+    <p style="font-size:0.8rem;color:#ccc">Välj baserat på dina 5 första kort</p>
+    <div id="trump-buttons">
+      <button onclick="callTrump('S')" title="Spader">♠</button>
+      <button onclick="callTrump('H')" title="Hjärter" style="color:#c0392b">♥</button>
+      <button onclick="callTrump('D')" title="Ruter"  style="color:#c0392b">♦</button>
+      <button onclick="callTrump('C')" title="Klöver">♣</button>
+    </div>
+  </div>
+
+  <div id="table-area">
+    <div id="table-label">Bordet</div>
+    <div id="trump-badge"></div>
+    <div id="table-cards" style="display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center"></div>
+  </div>
+
+  <div id="hand-label" style="text-align:center;color:#aaa;font-size:0.75rem;margin-bottom:0.3rem">Din hand</div>
+  <div id="hand-area"></div>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div id="overlay-box">
+    <h2 id="overlay-title">Väntar...</h2>
+    <p id="overlay-msg"></p>
+    <div id="tricks-display"></div>
+    <button id="overlay-btn" style="display:none" onclick="overlayAction()">Nästa hand</button>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+// ---- Konstanter ----
+const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
+const SUIT_NAME   = { S: 'Spader', H: 'Hjärter', D: 'Ruter', C: 'Klöver' };
+const IS_RED      = { H: true, D: true };
+
+let socket, myPlayerId, myCode, mySeat, isHost, overlayMode;
+let countdownInterval;
+
+// ---- Anslut ----
+function connect() {
+  socket = io('http://localhost:3001');
+  socket.on('state', handleState);
+  socket.on('connect_error', () => showLobbyError('Kan inte nå servern på port 3001'));
+}
+
+// ---- Lobby-knappar ----
+document.getElementById('btn-create').onclick = () => {
+  const name = nameVal();
+  connect();
+  socket.emit('createRoom', { name }, ({ ok, code, playerId }) => {
+    if (!ok) return;
+    myPlayerId = playerId; myCode = code; mySeat = 0; isHost = true;
+    localStorage.setItem('cp_pid', playerId);
+    localStorage.setItem('cp_code', code);
+    showGame();
+  });
+};
+
+document.getElementById('btn-join').onclick = () => {
+  const name = nameVal();
+  const code = document.getElementById('code-input').value.toUpperCase().trim();
+  if (!code) return showLobbyError('Ange en rumkod');
+  connect();
+  socket.emit('joinRoom', { code, name }, (res) => {
+    if (!res.ok) return showLobbyError(res.error);
+    myPlayerId = res.playerId; myCode = res.code; mySeat = res.seat; isHost = false;
+    localStorage.setItem('cp_pid', res.playerId);
+    localStorage.setItem('cp_code', res.code);
+    showGame();
+  });
+};
+
+function nameVal() {
+  return document.getElementById('name-input').value.trim() || 'Spelare';
+}
+
+function showLobbyError(msg) {
+  document.getElementById('lobby-error').textContent = msg;
+}
+
+function showGame() {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('room-code').textContent = myCode;
+  if (isHost) document.getElementById('start-btn').style.display = 'inline-block';
+}
+
+// ---- Hantera spelstatus ----
+function handleState(st) {
+  updateSeats(st);
+  updateScore(st);
+  updateTopBar(st);
+  updateTable(st);
+  updateHand(st);
+  updateTrumpSelector(st);
+  updateStatus(st);
+  updateOverlay(st);
+}
+
+function updateSeats(st) {
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById(`seat-${i}`);
+    const s = st.seats[i];
+    el.querySelector('.seat-name').textContent = s ? s.name + (s.isAI ? ' 🤖' : '') : '(tom)';
+    el.querySelector('.seat-cards').textContent = s ? `${st.handCounts[i] || 0} kort` : '';
+    el.className = 'seat' +
+      (i === st.turn ? ' active-turn' : '') +
+      (i === mySeat  ? ' you' : '') +
+      (s?.disconnected ? ' disconnected' : '');
+  }
+}
+
+function updateScore(st) {
+  document.getElementById('score-a').textContent = st.score[0];
+  document.getElementById('score-b').textContent = st.score[1];
+}
+
+function updateTopBar(st) {
+  // Nedräkning
+  clearInterval(countdownInterval);
+  const cdEl = document.getElementById('countdown');
+  if (st.autostartAt && !st.started) {
+    const tick = () => {
+      const s = Math.max(0, Math.ceil((st.autostartAt - Date.now()) / 1000));
+      cdEl.textContent = `Startar om ${s}s`;
+    };
+    tick();
+    countdownInterval = setInterval(tick, 500);
+  } else {
+    cdEl.textContent = '';
+  }
+  // Visa/göm startknapp
+  const sb = document.getElementById('start-btn');
+  sb.style.display = (isHost && !st.started) ? 'inline-block' : 'none';
+}
+
+function updateTable(st) {
+  const trump = st.trump;
+  document.getElementById('trump-badge').textContent =
+    trump ? `Trumf: ${SUIT_SYMBOL[trump]}` : '';
+
+  const tc = document.getElementById('table-cards');
+  tc.innerHTML = '';
+  for (const play of st.table) {
+    const name = st.seats[play.seat]?.name || `Plats ${play.seat}`;
+    tc.appendChild(makeCard(play.card, false, name));
+  }
+}
+
+function updateHand(st) {
+  const ha = document.getElementById('hand-area');
+  ha.innerHTML = '';
+  if (!st.yourHand || st.yourHand.length === 0) return;
+
+  // Sortera: färg, sedan rang
+  const suitOrder = { S: 0, H: 1, D: 2, C: 3 };
+  const sorted = st.yourHand.slice().sort((a, b) =>
+    suitOrder[a.s] - suitOrder[b.s] ||
+    rankValue(a.r) - rankValue(b.r)
+  );
+
+  const legalIds = new Set(st.legal || []);
+  for (const card of sorted) {
+    const id = cardId(card);
+    const el = makeCard(card, legalIds.has(id));
+    if (legalIds.has(id)) {
+      el.onclick = () => playCard(card);
+    }
+    ha.appendChild(el);
+  }
+}
+
+function updateTrumpSelector(st) {
+  const ts = document.getElementById('trump-selector');
+  ts.style.display =
+    (st.phase === 'calling' && st.yourSeat === st.caller) ? 'flex' : 'none';
+}
+
+function updateStatus(st) {
+  const el = document.getElementById('status-bar');
+  if (!st.started) { el.textContent = 'Väntar på spelare...'; return; }
+  if (st.phase === 'calling') {
+    const who = st.yourSeat === st.caller ? 'Du' : (st.seats[st.caller]?.name || '?');
+    el.textContent = st.yourSeat === st.caller
+      ? 'Välj trumffärg!'
+      : `${who} väljer trumf...`;
+    return;
+  }
+  if (st.phase === 'play') {
+    if (st.turn === mySeat) el.textContent = 'Din tur — spela ett kort!';
+    else if (st.turn < 0)   el.textContent = 'Stick avgörs...';
+    else el.textContent = `${st.seats[st.turn]?.name || '?'} spelar...`;
+    return;
+  }
+  el.textContent = '';
+}
+
+function updateOverlay(st) {
+  const ov = document.getElementById('overlay');
+  const title = document.getElementById('overlay-title');
+  const msg   = document.getElementById('overlay-msg');
+  const btn   = document.getElementById('overlay-btn');
+  const td    = document.getElementById('tricks-display');
+
+  if (!st.started) {
+    overlayMode = 'waiting';
+    title.textContent = `Rum: ${myCode}`;
+    msg.textContent = 'Dela koden med dina vänner. Spelet startar automatiskt när alla är med, eller om du klickar "Starta nu".';
+    td.textContent = '';
+    btn.style.display = 'none';
+    ov.classList.add('show');
+    return;
+  }
+
+  if (st.phase === 'handover') {
+    overlayMode = 'handover';
+    const r = st.lastResult;
+    const teamName = r.winTeam === 0 ? 'Lag A (0&2)' : 'Lag B (1&3)';
+    title.textContent = r.baunie ? '🏆 Baunie!' : r.kot ? '💥 Kot!' : `${teamName} vann!`;
+    msg.textContent = r.baunie
+      ? `${teamName} tog ALLA stick! (+${r.points} poäng)`
+      : r.kot
+      ? `${teamName} vann med nolla mot! (+${r.points} poäng)`
+      : `${teamName} vann handen (+${r.points} poäng)`;
+    td.textContent = `Stick: ${st.tricksWon[0]}–${st.tricksWon[1]}  |  Match: ${st.score[0]}–${st.score[1]}`;
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Nästa hand';
+    ov.classList.add('show');
+    return;
+  }
+
+  if (st.phase === 'gameover') {
+    overlayMode = 'gameover';
+    const winner = st.score[0] >= 7 ? 'Lag A (0&2)' : 'Lag B (1&3)';
+    title.textContent = `🎉 ${winner} vann matchen!`;
+    msg.textContent = `Slutresultat: ${st.score[0]}–${st.score[1]}`;
+    td.textContent = '';
+    btn.style.display = 'none';
+    ov.classList.add('show');
+    return;
+  }
+
+  ov.classList.remove('show');
+}
+
+// ---- Åtgärder ----
+function playCard(card) {
+  socket.emit('playCard', { card });
+}
+
+function callTrump(suit) {
+  socket.emit('callTrump', { suit });
+}
+
+function startGame() {
+  socket.emit('startGame', {}, () => {});
+}
+
+function overlayAction() {
+  if (overlayMode === 'handover') socket.emit('nextHand');
+}
+
+// ---- Kort-element ----
+function makeCard(card, legal, playerName) {
+  const el = document.createElement('div');
+  el.className = 'card' + (IS_RED[card.s] ? ' red' : '') + (legal ? ' legal' : '');
+  el.innerHTML = `
+    <div class="card-rank">${card.r}</div>
+    <div class="card-suit">${SUIT_SYMBOL[card.s]}</div>
+    ${playerName ? `<div class="card-player">${playerName}</div>` : ''}
+  `;
+  return el;
+}
+
+function cardId(c) { return `${c.r}${c.s}`; }
+
+const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+function rankValue(r) { return RANK_ORDER.indexOf(r); }
+</script>
+</body>
+</html>
