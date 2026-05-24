@@ -312,7 +312,7 @@ let countdownInterval;
 
 // ---- Anslut ----
 function connect() {
-  socket = io('http://localhost:3001');
+  socket = io();
   socket.on('state', handleState);
   socket.on('connect_error', () => showLobbyError('Kan inte nå servern på port 3001'));
 }
@@ -509,7 +509,8 @@ function updateOverlay(st) {
     title.textContent = `🎉 ${winner} vann matchen!`;
     msg.textContent = `Slutresultat: ${st.score[0]}–${st.score[1]}`;
     td.textContent = '';
-    btn.style.display = 'none';
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Ny match';
     ov.classList.add('show');
     return;
   }
@@ -532,6 +533,11 @@ function startGame() {
 
 function overlayAction() {
   if (overlayMode === 'handover') socket.emit('nextHand');
+  if (overlayMode === 'gameover') {
+    localStorage.removeItem('cp_pid');
+    localStorage.removeItem('cp_code');
+    location.reload();
+  }
 }
 
 // ---- Kort-element ----
@@ -550,6 +556,28 @@ function cardId(c) { return `${c.r}${c.s}`; }
 
 const RANK_ORDER = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 function rankValue(r) { return RANK_ORDER.indexOf(r); }
+
+// ---- Auto-återanslutning vid sidomladdning ----
+window.addEventListener('load', () => {
+  const pid  = localStorage.getItem('cp_pid');
+  const code = localStorage.getItem('cp_code');
+  if (!pid || !code) return;
+  connect();
+  socket.on('connect', () => {
+    socket.emit('rejoin', { playerId: pid, code }, (res) => {
+      if (res && res.ok) {
+        myPlayerId = pid;
+        myCode     = code;
+        mySeat     = res.seat;
+        isHost     = (res.seat === 0);
+        showGame();
+      } else {
+        localStorage.removeItem('cp_pid');
+        localStorage.removeItem('cp_code');
+      }
+    });
+  });
+});
 </script>
 </body>
 </html>
