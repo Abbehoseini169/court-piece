@@ -7,59 +7,55 @@ vi i nästa steg.
 
 ## Vad du behöver först
 
-Installera **Node.js** (LTS-versionen) från https://nodejs.org
-Det ger dig både `node` och `npm`. Du behöver inget mer.
+Installera **Python 3.10+** om du inte redan har det: https://www.python.org
 
 Kontrollera att det funkar — öppna en terminal och skriv:
 
-    node --version
-    npm --version
+    python3 --version
 
-Om båda skriver ut ett versionsnummer är du redo.
+Om det skriver ut ett versionsnummer (t.ex. `Python 3.11.4`) är du redo.
 
 ## Så här kör du servern
 
-1. Öppna en terminal och gå till server-mappen:
+1. Öppna en terminal och gå till projektmappen:
 
-       cd court-piece/server
+       cd court-piece
 
-2. Installera biblioteken (Express + Socket.IO). Detta görs en gång:
+2. Installera biblioteken (Flask + Socket.IO). Detta görs en gång:
 
-       npm install
+       pip install -r requirements.txt
 
 3. Starta servern:
 
-       npm start
+       python server.py
 
-   Du ska se: `Court Piece-servern (domaren) lyssnar på port 3001`
+   Du ska se: `Court Piece-servern (Python) lyssnar på port 3001`
    Servern körs nu. Lämna terminalen öppen.
 
 ## Så här testar du att allt fungerar (utan klient ännu)
 
 Öppna en NY terminal (låt servern fortsätta köra i den första) och kör:
 
-    cd court-piece/server
-    node smoke-test.js
+    cd court-piece
+    python smoke-test.py
 
 Det ansluter en testklient, skapar ett rum, fyller på med 3 AI-spelare och
-spelar en hel hand. Du ser korten läggas ut stick för stick och poängen i
+spelar en hel match. Du ser korten läggas ut stick för stick och poängen i
 slutet. Det bevisar att servern och spelreglerna hänger ihop.
 
 ## Filerna och vad de gör
 
-- **game.js** — de rena spelreglerna (kortlek, blandning, vem som vinner
-  sticket, AI-besluten, poäng). Inget om nätverk eller skärmar. Det här är
-  samma logik som i den ursprungliga app-prototypen, och kan återanvändas
-  rakt av i en framtida mobilapp.
+- **game.py** — de rena spelreglerna (kortlek, blandning, vem som vinner
+  sticket, AI-besluten, poäng). Inget om nätverk eller skärmar.
 
-- **server.js** — domaren. Hanterar rum (skapa/gå med via 4-teckenskod),
+- **server.py** — domaren. Hanterar rum (skapa/gå med via 4-teckenskod),
   30-sekunders nedräkning innan tomma platser fylls med AI, tar emot drag
   från spelare, validerar dem mot reglerna, och skickar tillbaka det nya
   speltillståndet till alla. Skickar ALDRIG en spelares kort till någon
   annan — det är så fusk förhindras.
 
-- **smoke-test.js** — ett litet testskript (ingen webbläsare) som spelar en
-  hand automatiskt, så du snabbt kan se att servern lever.
+- **smoke-test.py** — ett litet testskript (ingen webbläsare) som spelar en
+  match automatiskt, så du snabbt kan se att servern lever.
 
 ## Så startas ett spel (båda sätten finns)
 
